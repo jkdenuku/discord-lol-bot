@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import random
 import os
+from keep_alive import keep_alive
 
 # ボットの設定
 intents = discord.Intents.default()
@@ -11,7 +12,7 @@ intents.guilds = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 特定のユーザーID（あなたのDiscord ID）
-ALLOWED_USER_ID = 1464850594790637569  # ←あなたのIDに変更済み
+ALLOWED_USER_ID = 1464850594790637569
 
 @bot.event
 async def on_ready():
@@ -52,6 +53,9 @@ async def lol(ctx):
         
     except Exception as e:
         print(f"エラーが発生しました: {e}")
+
+# Keep-aliveを起動（24時間稼働用）
+keep_alive()
 
 # ボットを起動（環境変数からトークンを取得）
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
